@@ -44,6 +44,24 @@ const SHAPES = [
 
 const BEST_KEY = "bb_best";
 
+/* ----- PENGATURAN WAKTU (silakan ubah) ----- */
+
+/* Detik untuk menaruh blok di awal permainan */
+const START_SECONDS = 12;
+
+/* Waktu paling sedikit (makin tinggi skor, makin cepat) */
+const MIN_SECONDS = 5;
+
+/* Waktu berkurang 1 detik setiap skor naik sekian poin */
+const SCORE_PER_SPEEDUP = 150;
+
+/* Jika waktu habis, berapa kotak "batu" abu-abu muncul di papan.
+   Ini yang membuat papan lama-lama penuh sampai game over.
+   Isi 0 untuk mematikan. */
+const TIMEOUT_PENALTY_CELLS = 3;
+
+const PENALTY_COLOR = "#5f6d64";
+
 
 /* =====================================================
    2. STATE GAME
@@ -57,6 +75,11 @@ let best = 0;
 let gameBusy = false;
 let playing = false;
 let cellEls = [];
+let timerId = null;
+let timeLeft = 0;
+let turnTotal = 0;
+let lastTickSecond = -1;
+const TICK_MS = 100;
 
 const $ = id => document.getElementById(id);
 
@@ -151,14 +174,18 @@ function shade(hex, amount) {
    4. BLOK PILIHAN
 ===================================================== */
 
+function randomPiece() {
+  return {
+    shape: SHAPES[Math.floor(Math.random() * SHAPES.length)],
+    color: COLORS[Math.floor(Math.random() * COLORS.length)]
+  };
+}
+
 function generatePieces() {
   pieces = [];
 
   for (let i = 0; i < 3; i++) {
-    pieces.push({
-      shape: SHAPES[Math.floor(Math.random() * SHAPES.length)],
-      color: COLORS[Math.floor(Math.random() * COLORS.length)]
-    });
+    pieces.push(randomPiece());
   }
 }
 
@@ -390,11 +417,13 @@ function finishTurn() {
   updateScore();
 
   if (!hasAnyMove()) {
+    stopTimer();
     setTimeout(endGame, 450);
     return;
   }
 
   gameBusy = false;
+  resetTurnTimer();
 }
 
 function showCombo(lines) {
@@ -434,6 +463,117 @@ function showMessage(text) {
 
 
 /* =====================================================
+   6B. TIMER
+   Waktu habis -> semua blok yang tersisa berubah bentuk
+   (+ kotak penalti muncul). Berulang sampai blok baru
+   tidak muat lagi -> game over.
+===================================================== */
+
+function turnSeconds() {
+  const faster = Math.floor(score / SCORE_PER_SPEEDUP);
+  return Math.max(MIN_SECONDS, START_SECONDS - faster);
+}
+
+function resetTurnTimer() {
+  turnTotal = turnSeconds() * 1000;
+  timeLeft = turnTotal;
+  lastTickSecond = -1;
+  renderTimer();
+}
+
+function startTimer() {
+  stopTimer();
+  resetTurnTimer();
+  timerId = setInterval(tickTimer, TICK_MS);
+}
+
+function stopTimer() {
+  clearInterval(timerId);
+  timerId = null;
+}
+
+function tickTimer() {
+  /* Waktu berhenti saat animasi berjalan */
+  if (!playing || gameBusy) return;
+
+  timeLeft -= TICK_MS;
+
+  const sec = Math.ceil(timeLeft / 1000);
+  if (sec <= 3 && sec > 0 && sec !== lastTickSecond) {
+    lastTickSecond = sec;
+    GameAudio.tick();
+  }
+
+  if (timeLeft <= 0) {
+    timeLeft = 0;
+    renderTimer();
+    onTimeout();
+    return;
+  }
+
+  renderTimer();
+}
+
+function renderTimer() {
+  const pct = turnTotal > 0 ? (timeLeft / turnTotal) * 100 : 0;
+  $("timerFill").style.width = pct + "%";
+  $("timerText").textContent = "⏱ " + Math.ceil(timeLeft / 1000);
+  $("timer").classList.toggle("warning", timeLeft <= 3000);
+}
+
+function onTimeout() {
+  gameBusy = true;
+  selectedPiece = -1;
+
+  GameAudio.timeout();
+
+  /* Blok yang tersisa berubah bentuk */
+  pieces = pieces.map(p => p ? randomPiece() : null);
+
+  /* Penalti: kotak abu-abu muncul di papan */
+  addPenaltyCells(TIMEOUT_PENALTY_CELLS);
+
+  paintBoard();
+  renderPieces();
+  updateScore();
+
+  const boardEl = $("board");
+  boardEl.classList.remove("shake");
+  void boardEl.offsetWidth;
+  boardEl.classList.add("shake");
+
+  showMessage("⏰ Waktu habis! Bentuk blok berubah.");
+
+  if (!hasAnyMove()) {
+    stopTimer();
+    setTimeout(endGame, 600);
+    return;
+  }
+
+  setTimeout(() => {
+    gameBusy = false;
+    resetTurnTimer();
+  }, 450);
+}
+
+function addPenaltyCells(count) {
+  const empty = [];
+
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      if (!board[r][c]) empty.push([r, c]);
+    }
+  }
+
+  for (let i = 0; i < count && empty.length > 0; i++) {
+    const k = Math.floor(Math.random() * empty.length);
+    const [r, c] = empty.splice(k, 1)[0];
+    board[r][c] = PENALTY_COLOR;
+  }
+}
+
+
+/* =====================================================
    7. GAME OVER, MULAI, ULANG
 ===================================================== */
 
@@ -455,11 +595,13 @@ function startGame() {
 
   GameAudio.start();
   GameAudio.startMusic();
+  startTimer();
 }
 
 function endGame() {
   gameBusy = false;
   playing = false;
+  stopTimer();
 
   const isNewRecord = score > 0 && score >= best && score > loadBest();
   saveBest(best);
