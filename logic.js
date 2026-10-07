@@ -47,7 +47,7 @@ const BEST_KEY = "bb_best";
 /* ----- PENGATURAN WAKTU (silakan ubah) -----
    Waktu (detik) untuk menaruh blok di setiap giliran.
    Jika habis sebelum blok ditaruh -> langsung GAME OVER. */
-const TURN_SECONDS = 5;
+const TURN_SECONDS = 10;
 
 
 /* =====================================================
