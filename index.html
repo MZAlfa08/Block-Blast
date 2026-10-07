@@ -47,6 +47,7 @@
     <div class="game-buttons">
       <button id="btnRestart" type="button">🔄 ULANG</button>
       <button id="btnSound" type="button" aria-label="Suara">🔊 SUARA</button>
+      <button id="btnHome" type="button">🏠 HOME</button>
     </div>
 
 
@@ -64,8 +65,6 @@
         <button id="btnStart" class="main-button start-button" type="button">
           ▶ MULAI MAIN
         </button>
-        <br>
-        <p>Dibuat Oleh M Zhafran Alfatih</p>
       </div>
     </section>
 
@@ -88,6 +87,31 @@
         <button id="btnPlayAgain" class="main-button start-button" type="button">
           ▶ MAIN LAGI
         </button>
+        <button id="btnGameOverHome" class="main-button secondary-button" type="button">
+          🏠 KEMBALI KE HOME
+        </button>
+      </div>
+    </section>
+
+
+    <!-- =============================================
+         KONFIRMASI KELUAR KE HOME
+    ============================================== -->
+    <section id="exitOverlay" class="overlay hidden">
+      <div class="overlay-box over-box">
+        <div class="overlay-icon">🏠</div>
+        <h2 class="overlay-title small-title">KELUAR?</h2>
+        <p class="overlay-text">
+          Permainan berhenti dan skor saat ini tidak disimpan.
+        </p>
+        <div class="btn-row">
+          <button id="btnExitCancel" class="main-button secondary-button" type="button">
+            LANJUT MAIN
+          </button>
+          <button id="btnExitConfirm" class="main-button red-button" type="button">
+            KELUAR
+          </button>
+        </div>
       </div>
     </section>
 
