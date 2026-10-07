@@ -75,6 +75,7 @@ let best = 0;
 let gameBusy = false;
 let playing = false;
 let cellEls = [];
+let previewCell = null;   // posisi tap terakhir yang sedang di-highlight
 let timerId = null;
 let timeLeft = 0;
 let turnTotal = 0;
@@ -118,11 +119,14 @@ function buildBoard() {
       /* Sentuh / klik: taruh blok */
       cell.addEventListener("pointerdown", e => {
         e.preventDefault();
-        if (selectedPiece !== -1 && !gameBusy && playing) {
-          placePiece(row, col);
-        } else if (selectedPiece === -1 && !gameBusy && playing) {
+        if (!playing || gameBusy) return;
+
+        if (selectedPiece === -1) {
           showMessage("Pilih blok terlebih dahulu.");
+          return;
         }
+
+        handleBoardTap(row, col);
       });
 
       el.appendChild(cell);
@@ -130,8 +134,13 @@ function buildBoard() {
     }
   }
 
-  el.addEventListener("pointerleave", () => {
-    if (!gameBusy) paintBoard();
+  /* Hanya mouse yang menghapus highlight saat keluar papan.
+     Pada layar sentuh, highlight tetap ada setelah jari diangkat. */
+  el.addEventListener("pointerleave", e => {
+    if (e.pointerType === "mouse" && !gameBusy) {
+      previewCell = null;
+      paintBoard();
+    }
   });
 }
 
@@ -212,8 +221,9 @@ function renderPieces() {
       if (gameBusy || !playing) return;
 
       selectedPiece = index;
+      previewCell = null;
       GameAudio.select();
-      showMessage("Sekarang tap kotak tujuan di papan.");
+      showMessage("Tap kotak tujuan untuk melihat posisi, tap lagi untuk menaruh.");
       paintBoard();
       renderPieces();
     });
@@ -274,6 +284,7 @@ function canPlace(piece, startRow, startCol) {
 }
 
 function showPreview(row, col) {
+  previewCell = { row, col };
   paintBoard();
 
   const piece = pieces[selectedPiece];
@@ -300,6 +311,33 @@ function showPreview(row, col) {
         cell.classList.add("preview-invalid");
       }
     }
+  }
+}
+
+/*
+ * Tap pertama  -> tampilkan highlight (hijau/putih = pas, merah = tidak muat)
+ * Tap kedua di kotak yang sama -> taruh blok
+ * Tap di kotak lain -> highlight pindah
+ */
+function handleBoardTap(row, col) {
+  const same = previewCell && previewCell.row === row && previewCell.col === col;
+
+  if (same) {
+    placePiece(row, col);
+    return;
+  }
+
+  showPreview(row, col);
+
+  const piece = pieces[selectedPiece];
+  if (!piece) return;
+
+  const a = anchor(piece, row, col);
+
+  if (canPlace(piece, a.row, a.col)) {
+    showMessage("✅ Pas! Tap lagi di kotak yang sama untuk menaruh.");
+  } else {
+    showMessage("❌ Belum muat. Tap kotak lain untuk menggeser.");
   }
 }
 
@@ -330,13 +368,13 @@ function placePiece(tapRow, tapCol) {
   const a = anchor(piece, tapRow, tapCol);
 
   if (!canPlace(piece, a.row, a.col)) {
-    paintBoard();
     GameAudio.invalid();
     showMessage("❌ Blok tidak muat di posisi itu.");
     return;
   }
 
   gameBusy = true;
+  previewCell = null;
 
   /* Taruh blok ke data papan */
   const placed = [];
@@ -524,6 +562,7 @@ function renderTimer() {
 function onTimeout() {
   gameBusy = true;
   selectedPiece = -1;
+  previewCell = null;
 
   GameAudio.timeout();
 
@@ -582,6 +621,7 @@ function startGame() {
   playing = true;
   score = 0;
   selectedPiece = -1;
+  previewCell = null;
 
   createBoardData();
   generatePieces();
@@ -633,12 +673,41 @@ function saveBest(value) {
 }
 
 
+/* Kembali ke halaman home (layar MULAI MAIN) dengan papan bersih */
+function goHome() {
+  playing = false;
+  gameBusy = false;
+  selectedPiece = -1;
+  previewCell = null;
+  score = 0;
+
+  stopTimer();
+  GameAudio.stopMusic();
+
+  createBoardData();
+  generatePieces();
+  paintBoard();
+  renderPieces();
+  updateScore();
+
+  turnTotal = START_SECONDS * 1000;
+  timeLeft = turnTotal;
+  renderTimer();
+
+  showMessage("Pilih salah satu blok.");
+
+  $("exitOverlay").classList.add("hidden");
+  $("gameOverOverlay").classList.add("hidden");
+  $("startOverlay").classList.remove("hidden");
+}
+
+
 /* =====================================================
    8. EVENT (TOMBOL & INPUT)
 ===================================================== */
 
 function updateSoundButton() {
-  $("btnSound").textContent = GameAudio.isMuted() ? "🔇 SUARA MATI" : "🔊 SUARA";
+  $("btnSound").textContent = GameAudio.isMuted() ? "🔇 MATI" : "🔊 SUARA";
 }
 
 function init() {
@@ -670,6 +739,22 @@ function init() {
     startGame();
   });
 
+  /* Tombol HOME: minta konfirmasi dulu, game dijeda selama konfirmasi */
+  $("btnHome").addEventListener("click", () => {
+    if (!playing) return;
+    playing = false;               // menjeda timer & input
+    $("exitOverlay").classList.remove("hidden");
+  });
+
+  $("btnExitCancel").addEventListener("click", () => {
+    $("exitOverlay").classList.add("hidden");
+    playing = true;
+  });
+
+  $("btnExitConfirm").addEventListener("click", goHome);
+
+  $("btnGameOverHome").addEventListener("click", goHome);
+
   $("btnSound").addEventListener("click", () => {
     GameAudio.init();
     GameAudio.toggleMute();
@@ -685,7 +770,10 @@ function init() {
       e.clientX >= rect.left && e.clientX <= rect.right &&
       e.clientY >= rect.top && e.clientY <= rect.bottom;
 
-    if (!inside) paintBoard();
+    if (!inside) {
+      previewCell = null;
+      paintBoard();
+    }
   });
 }
 
