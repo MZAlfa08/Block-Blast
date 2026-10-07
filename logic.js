@@ -44,23 +44,10 @@ const SHAPES = [
 
 const BEST_KEY = "bb_best";
 
-/* ----- PENGATURAN WAKTU (silakan ubah) ----- */
-
-/* Detik untuk menaruh blok di awal permainan */
-const START_SECONDS = 12;
-
-/* Waktu paling sedikit (makin tinggi skor, makin cepat) */
-const MIN_SECONDS = 5;
-
-/* Waktu berkurang 1 detik setiap skor naik sekian poin */
-const SCORE_PER_SPEEDUP = 150;
-
-/* Jika waktu habis, berapa kotak "batu" abu-abu muncul di papan.
-   Ini yang membuat papan lama-lama penuh sampai game over.
-   Isi 0 untuk mematikan. */
-const TIMEOUT_PENALTY_CELLS = 3;
-
-const PENALTY_COLOR = "#5f6d64";
+/* ----- PENGATURAN WAKTU (silakan ubah) -----
+   Waktu (detik) untuk menaruh blok di setiap giliran.
+   Jika habis sebelum blok ditaruh -> langsung GAME OVER. */
+const TURN_SECONDS = 5;
 
 
 /* =====================================================
@@ -502,14 +489,12 @@ function showMessage(text) {
 
 /* =====================================================
    6B. TIMER
-   Waktu habis -> semua blok yang tersisa berubah bentuk
-   (+ kotak penalti muncul). Berulang sampai blok baru
-   tidak muat lagi -> game over.
+   Setiap giliran ada batas waktu (TURN_SECONDS).
+   Jika waktu habis sebelum blok ditaruh -> GAME OVER.
 ===================================================== */
 
 function turnSeconds() {
-  const faster = Math.floor(score / SCORE_PER_SPEEDUP);
-  return Math.max(MIN_SECONDS, START_SECONDS - faster);
+  return TURN_SECONDS;
 }
 
 function resetTurnTimer() {
@@ -563,52 +548,19 @@ function onTimeout() {
   gameBusy = true;
   selectedPiece = -1;
   previewCell = null;
+  stopTimer();
 
   GameAudio.timeout();
-
-  /* Blok yang tersisa berubah bentuk */
-  pieces = pieces.map(p => p ? randomPiece() : null);
-
-  /* Penalti: kotak abu-abu muncul di papan */
-  addPenaltyCells(TIMEOUT_PENALTY_CELLS);
-
   paintBoard();
-  renderPieces();
-  updateScore();
 
   const boardEl = $("board");
   boardEl.classList.remove("shake");
   void boardEl.offsetWidth;
   boardEl.classList.add("shake");
 
-  showMessage("⏰ Waktu habis! Bentuk blok berubah.");
+  showMessage("⏰ Waktu habis!");
 
-  if (!hasAnyMove()) {
-    stopTimer();
-    setTimeout(endGame, 600);
-    return;
-  }
-
-  setTimeout(() => {
-    gameBusy = false;
-    resetTurnTimer();
-  }, 450);
-}
-
-function addPenaltyCells(count) {
-  const empty = [];
-
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
-      if (!board[r][c]) empty.push([r, c]);
-    }
-  }
-
-  for (let i = 0; i < count && empty.length > 0; i++) {
-    const k = Math.floor(Math.random() * empty.length);
-    const [r, c] = empty.splice(k, 1)[0];
-    board[r][c] = PENALTY_COLOR;
-  }
+  setTimeout(() => endGame("time"), 700);
 }
 
 
@@ -638,13 +590,18 @@ function startGame() {
   startTimer();
 }
 
-function endGame() {
+function endGame(reason) {
   gameBusy = false;
   playing = false;
   stopTimer();
 
   const isNewRecord = score > 0 && score >= best && score > loadBest();
   saveBest(best);
+
+  $("gameOverText").textContent =
+    reason === "time"
+      ? "Waktu habis! Kamu terlalu lama menaruh blok."
+      : "Tidak ada tempat lagi untuk blok berikutnya.";
 
   $("finalScore").textContent = score;
 
@@ -673,6 +630,22 @@ function saveBest(value) {
 }
 
 
+/* Pause: timer & input berhenti, papan tertutup layar PAUSE */
+function pauseGame() {
+  if (!playing || gameBusy) return;
+
+  playing = false;
+  GameAudio.stopMusic();
+  $("pauseOverlay").classList.remove("hidden");
+}
+
+function resumeGame() {
+  $("pauseOverlay").classList.add("hidden");
+  playing = true;
+  GameAudio.init();
+  GameAudio.startMusic();
+}
+
 /* Kembali ke halaman home (layar MULAI MAIN) dengan papan bersih */
 function goHome() {
   playing = false;
@@ -690,13 +663,14 @@ function goHome() {
   renderPieces();
   updateScore();
 
-  turnTotal = START_SECONDS * 1000;
+  turnTotal = TURN_SECONDS * 1000;
   timeLeft = turnTotal;
   renderTimer();
 
   showMessage("Pilih salah satu blok.");
 
   $("exitOverlay").classList.add("hidden");
+  $("pauseOverlay").classList.add("hidden");
   $("gameOverOverlay").classList.add("hidden");
   $("startOverlay").classList.remove("hidden");
 }
@@ -739,9 +713,19 @@ function init() {
     startGame();
   });
 
+  /* Tombol PAUSE */
+  $("btnPause").addEventListener("click", pauseGame);
+  $("btnResume").addEventListener("click", resumeGame);
+  $("btnPauseHome").addEventListener("click", goHome);
+
+  /* Otomatis pause jika tab/aplikasi ditinggalkan */
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) pauseGame();
+  });
+
   /* Tombol HOME: minta konfirmasi dulu, game dijeda selama konfirmasi */
   $("btnHome").addEventListener("click", () => {
-    if (!playing) return;
+    if (!playing || gameBusy) return;
     playing = false;               // menjeda timer & input
     $("exitOverlay").classList.remove("hidden");
   });
