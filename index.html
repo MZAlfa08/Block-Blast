@@ -32,7 +32,7 @@
     <!-- TIMER -->
     <div id="timer" class="timer">
       <div id="timerFill" class="timer-fill"></div>
-      <span id="timerText" class="timer-text">⏱ 10</span>
+      <span id="timerText" class="timer-text">⏱ 5</span>
     </div>
 
     <!-- PAPAN -->
@@ -46,6 +46,7 @@
     <!-- TOMBOL -->
     <div class="game-buttons">
       <button id="btnRestart" type="button">🔄 ULANG</button>
+      <button id="btnPause" type="button">⏸ PAUSE</button>
       <button id="btnSound" type="button" aria-label="Suara">🔊 SUARA</button>
       <button id="btnHome" type="button">🏠 HOME</button>
     </div>
@@ -76,7 +77,7 @@
       <div class="overlay-box over-box">
         <div class="overlay-icon">💥</div>
         <h2 class="overlay-title">GAME OVER</h2>
-        <p class="overlay-text">Tidak ada tempat lagi untuk blok berikutnya.</p>
+        <p id="gameOverText" class="overlay-text">Tidak ada tempat lagi untuk blok berikutnya.</p>
 
         <div class="result">
           <div class="result-label">SKOR KAMU</div>
@@ -88,6 +89,24 @@
           ▶ MAIN LAGI
         </button>
         <button id="btnGameOverHome" class="main-button secondary-button" type="button">
+          🏠 KEMBALI KE HOME
+        </button>
+      </div>
+    </section>
+
+
+    <!-- =============================================
+         LAYAR PAUSE
+    ============================================== -->
+    <section id="pauseOverlay" class="overlay hidden">
+      <div class="overlay-box over-box">
+        <div class="overlay-icon">⏸</div>
+        <h2 class="overlay-title small-title">PAUSE</h2>
+        <p class="overlay-text">Permainan dijeda. Waktu berhenti.</p>
+        <button id="btnResume" class="main-button start-button" type="button">
+          ▶ LANJUT MAIN
+        </button>
+        <button id="btnPauseHome" class="main-button secondary-button" type="button">
           🏠 KEMBALI KE HOME
         </button>
       </div>
