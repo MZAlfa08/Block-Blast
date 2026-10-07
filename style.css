@@ -129,6 +129,64 @@ button {
 }
 
 
+/* ---------- Timer ---------- */
+
+.timer {
+  position: relative;
+  width: min(100%, 450px, 62dvh);
+  height: 22px;
+  margin: 0 auto 8px;
+  border-radius: 11px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, .35);
+  border: 1px solid rgba(255, 255, 255, .12);
+}
+
+.timer-fill {
+  height: 100%;
+  width: 100%;
+  border-radius: 11px;
+  background: linear-gradient(90deg, #19d879, #ffc928);
+  transition: width .1s linear;
+}
+
+.timer.warning .timer-fill {
+  background: linear-gradient(90deg, #ff7a24, #ff365c);
+}
+
+.timer.warning {
+  animation: timerPulse .5s ease-in-out infinite alternate;
+}
+
+@keyframes timerPulse {
+  from { box-shadow: 0 0 0 rgba(255, 54, 92, 0); }
+  to   { box-shadow: 0 0 12px rgba(255, 54, 92, .8); }
+}
+
+.timer-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 900;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .8);
+}
+
+#board.shake {
+  animation: boardShake .4s ease;
+}
+
+@keyframes boardShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+
 /* =====================================================
    3. PAPAN & KOTAK
 ===================================================== */
