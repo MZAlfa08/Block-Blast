@@ -1,0 +1,536 @@
+/* =====================================================
+   BLOCK BLAST - STYLE
+   Daftar isi:
+   1. Dasar & layout (pusat layar)
+   2. Header & skor
+   3. Papan & kotak
+   4. Pesan & blok pilihan
+   5. Tombol
+   6. Overlay (mulai & game over)
+   7. Combo popup
+   8. Layar kecil & landscape
+===================================================== */
+
+
+/* =====================================================
+   1. DASAR & LAYOUT
+===================================================== */
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #fff;
+  background: radial-gradient(circle at 50% -15%, #385b42 0%, #14291c 35%, #070d09 100%);
+  background-attachment: fixed;
+  overflow-x: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+button {
+  font-family: inherit;
+  touch-action: manipulation;
+}
+
+/* Game selalu berada di TENGAH layar (horizontal & vertikal) */
+#app {
+  width: 100%;
+  min-height: 100dvh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding:
+    max(8px, env(safe-area-inset-top))
+    max(8px, env(safe-area-inset-right))
+    max(8px, env(safe-area-inset-bottom))
+    max(8px, env(safe-area-inset-left));
+}
+
+.game-container {
+  position: relative;
+  width: 100%;
+  max-width: 490px;
+  padding: clamp(8px, 3vw, 15px);
+  border-radius: clamp(18px, 6vw, 27px);
+  background: linear-gradient(145deg, #183d2a, #07120c);
+  border: 1px solid rgba(255, 255, 255, .13);
+  box-shadow: 0 30px 70px rgba(0, 0, 0, .6), inset 0 1px rgba(255, 255, 255, .12);
+  overflow: hidden;
+}
+
+
+/* =====================================================
+   2. HEADER & SKOR
+===================================================== */
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.header-title {
+  min-width: 0;
+  font-size: clamp(15px, 4.5vw, 22px);
+  font-weight: 900;
+  letter-spacing: .5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.score-group {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.score-box {
+  min-width: clamp(58px, 17vw, 76px);
+  padding: 5px 9px;
+  text-align: center;
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .04));
+  border: 1px solid rgba(255, 255, 255, .12);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .1);
+}
+
+.score-label {
+  display: block;
+  font-size: 8px;
+  color: #b9cdbd;
+  letter-spacing: 1px;
+}
+
+#score,
+#best {
+  font-size: clamp(16px, 5vw, 21px);
+  font-weight: 900;
+  color: #ffe45b;
+}
+
+#best {
+  color: #fff;
+}
+
+
+/* =====================================================
+   3. PAPAN & KOTAK
+===================================================== */
+
+#board {
+  /* Lebar mengikuti layar, tapi tidak lebih tinggi dari layar */
+  width: min(100%, 450px, 62dvh);
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+  padding: clamp(4px, 1.5vw, 7px);
+
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: clamp(2px, .9vw, 4px);
+
+  border-radius: clamp(12px, 4vw, 20px);
+  background: linear-gradient(145deg, #263a30, #080f0b);
+  border: 2px solid rgba(255, 255, 255, .1);
+  box-shadow: inset 0 5px 15px rgba(0, 0, 0, .55), 0 12px 30px rgba(0, 0, 0, .3);
+
+  touch-action: none;
+}
+
+.cell {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  border-radius: clamp(3px, 1.2vw, 6px);
+  background: linear-gradient(145deg, #24352b, #111b15);
+  border: 1px solid rgba(255, 255, 255, .04);
+  transition: transform .1s ease, opacity .1s ease;
+  touch-action: none;
+}
+
+.cell::after {
+  content: "";
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 7%;
+  height: 23%;
+  border-radius: 50%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .08), transparent);
+  pointer-events: none;
+}
+
+.cell.filled {
+  border: none;
+  transform: scale(.94);
+  box-shadow:
+    inset 0 3px rgba(255, 255, 255, .35),
+    inset 0 -5px rgba(0, 0, 0, .3),
+    0 3px 6px rgba(0, 0, 0, .45);
+}
+
+.cell.preview-valid {
+  opacity: .72;
+  transform: scale(.88);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .65), 0 0 10px rgba(255, 255, 255, .15);
+}
+
+.cell.preview-invalid {
+  opacity: .6;
+  transform: scale(.88);
+  background: linear-gradient(145deg, #9b2534, #51121b);
+  box-shadow: inset 0 0 0 2px rgba(255, 100, 100, .65);
+}
+
+.cell.place-pop {
+  animation: placeBlock .28s cubic-bezier(.2, .9, .3, 1.4);
+}
+
+@keyframes placeBlock {
+  0%   { transform: scale(.3);  opacity: .1; }
+  55%  { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(.94); opacity: 1; }
+}
+
+.cell.clear-animation {
+  animation: destroyBlock .42s ease forwards;
+}
+
+@keyframes destroyBlock {
+  0%   { transform: scale(.94) rotate(0);    opacity: 1;   filter: brightness(1); }
+  35%  { transform: scale(1.18) rotate(3deg); opacity: 1;   filter: brightness(1.8); }
+  70%  { transform: scale(.7) rotate(-5deg);  opacity: .65; }
+  100% { transform: scale(.05) rotate(15deg); opacity: 0;   filter: brightness(2); }
+}
+
+
+/* =====================================================
+   4. PESAN & BLOK PILIHAN
+===================================================== */
+
+#message {
+  min-height: 24px;
+  margin: 8px 0 6px;
+  text-align: center;
+  color: #bdd0c1;
+  font-size: clamp(11px, 3.3vw, 13px);
+  line-height: 1.3;
+  transition: opacity .18s ease;
+}
+
+.pieces-title {
+  text-align: center;
+  color: #8fa997;
+  font-size: clamp(9px, 2.8vw, 11px);
+  letter-spacing: 1px;
+  margin-bottom: 2px;
+}
+
+#pieces {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: clamp(3px, 2vw, 8px);
+}
+
+.piece {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 120px;
+  height: clamp(72px, 22vw, 100px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: clamp(12px, 4vw, 16px);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform .15s ease, background .15s ease, border-color .15s ease;
+}
+
+.piece:active {
+  transform: scale(.92);
+}
+
+.piece.selected {
+  transform: translateY(-5px) scale(1.04);
+  background: rgba(255, 220, 60, .12);
+  border-color: #ffe45b;
+  box-shadow: 0 12px 28px rgba(255, 210, 0, .16), inset 0 1px rgba(255, 255, 255, .1);
+}
+
+.piece.used {
+  opacity: .12;
+  pointer-events: none;
+}
+
+.mini-grid {
+  display: grid;
+  gap: clamp(2px, .7vw, 3px);
+}
+
+.mini-cell {
+  width: clamp(11px, 4.2vw, 18px);
+  height: clamp(11px, 4.2vw, 18px);
+  border-radius: clamp(3px, 1vw, 4px);
+  box-shadow:
+    inset 0 2px rgba(255, 255, 255, .35),
+    inset 0 -3px rgba(0, 0, 0, .25),
+    0 2px 4px rgba(0, 0, 0, .35);
+}
+
+
+/* =====================================================
+   5. TOMBOL
+===================================================== */
+
+.game-buttons {
+  display: flex;
+  gap: 7px;
+  margin-top: 9px;
+}
+
+.game-buttons button {
+  flex: 1;
+  min-width: 0;
+  min-height: clamp(42px, 12vw, 48px);
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #304738, #1c2c22);
+  color: #fff;
+  font-size: clamp(12px, 3.5vw, 14px);
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform .12s;
+}
+
+.game-buttons button:active {
+  transform: scale(.95);
+}
+
+.main-button {
+  width: 100%;
+  min-height: 52px;
+  padding: 14px 18px;
+  margin-top: 8px;
+  border: none;
+  border-radius: 15px;
+  font-size: clamp(14px, 4vw, 17px);
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform .12s ease, filter .12s ease;
+}
+
+.main-button:active {
+  transform: translateY(3px) scale(.985);
+  filter: brightness(.9);
+}
+
+.start-button {
+  background: linear-gradient(180deg, #ffe45b, #e2a900);
+  color: #422e00;
+  box-shadow: 0 5px 0 #a97800, 0 12px 25px rgba(255, 210, 0, .3);
+}
+
+
+/* =====================================================
+   6. OVERLAY (MULAI & GAME OVER)
+===================================================== */
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+  background: rgba(4, 10, 6, .72);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  animation: overlayIn .3s ease;
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.overlay-box {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  padding: clamp(22px, 7vw, 34px) clamp(14px, 5vw, 24px);
+  text-align: center;
+  border-radius: clamp(18px, 6vw, 26px);
+  background: linear-gradient(145deg, #0d4d29 0%, #176c39 35%, #8c1622 68%, #d6a900 100%);
+  border: 2px solid rgba(255, 255, 255, .2);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, .55), inset 0 2px rgba(255, 255, 255, .25);
+  animation: boxIn .35s cubic-bezier(.2, .9, .3, 1.2);
+}
+
+.over-box {
+  background: linear-gradient(145deg, #5b1724, #24100f, #10150e);
+  border-color: rgba(255, 255, 255, .14);
+}
+
+@keyframes boxIn {
+  from { opacity: 0; transform: translateY(14px) scale(.94); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.overlay-icon {
+  font-size: clamp(50px, 15vw, 68px);
+  filter: drop-shadow(0 10px 10px rgba(0, 0, 0, .5));
+  animation: floating .9s ease-in-out infinite alternate;
+}
+
+@keyframes floating {
+  from { transform: translateY(0) rotate(-2deg); }
+  to   { transform: translateY(-7px) rotate(2deg); }
+}
+
+.overlay-title {
+  margin: 4px 0 8px;
+  font-size: clamp(28px, 9vw, 44px);
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-shadow: 0 3px 0 #caa900, 0 6px 15px rgba(0, 0, 0, .5);
+}
+
+.over-box .overlay-title {
+  text-shadow: 0 3px 0 #7a1020, 0 6px 15px rgba(0, 0, 0, .5);
+}
+
+.overlay-text {
+  margin: 0 0 18px;
+  font-size: clamp(12px, 3.5vw, 14px);
+  line-height: 1.5;
+  color: #f1f5f2;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, .35);
+}
+
+.result {
+  margin: 0 0 16px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, .28);
+  border: 1px solid rgba(255, 255, 255, .1);
+}
+
+.result-label {
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: #b9cdbd;
+}
+
+.result-score {
+  margin: 2px 0;
+  font-size: clamp(36px, 12vw, 52px);
+  font-weight: 900;
+  color: #ffe45b;
+  line-height: 1.1;
+}
+
+.result-best {
+  font-size: 13px;
+  color: #d5e2d8;
+}
+
+.result-best.new-record {
+  color: #ffe45b;
+  font-weight: 900;
+}
+
+
+/* =====================================================
+   7. COMBO POPUP
+===================================================== */
+
+.combo-popup {
+  position: fixed;
+  left: 50%;
+  top: 43%;
+  z-index: 100;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  font-size: clamp(24px, 7vw, 36px);
+  font-weight: 900;
+  color: #ffe45b;
+  text-align: center;
+  white-space: nowrap;
+  text-shadow: 0 3px 0 #a87900, 0 6px 15px rgba(0, 0, 0, .7);
+  animation: comboPop .8s ease forwards;
+}
+
+@keyframes comboPop {
+  0%   { opacity: 0; transform: translate(-50%, -30%) scale(.4) rotate(-8deg); }
+  25%  { opacity: 1; transform: translate(-50%, -50%) scale(1.18) rotate(3deg); }
+  100% { opacity: 0; transform: translate(-50%, -90%) scale(1) rotate(0); }
+}
+
+
+/* =====================================================
+   8. LAYAR KECIL & LANDSCAPE
+===================================================== */
+
+@media (max-width: 400px) {
+  #app { padding: 5px; }
+
+  .game-container {
+    padding: 7px;
+    border-radius: 18px;
+  }
+
+  .game-header { gap: 5px; margin-bottom: 7px; }
+  .score-group { gap: 4px; }
+  .score-box { min-width: 52px; padding: 4px 6px; }
+
+  #board { padding: 4px; gap: 2px; }
+  #pieces { gap: 3px; }
+  .game-buttons { gap: 5px; }
+  .game-buttons button { min-height: 42px; font-size: 12px; }
+}
+
+@media (max-width: 340px) {
+  .header-title { font-size: 14px; }
+  .mini-cell { width: 10px; height: 10px; }
+}
+
+/* HP posisi miring: papan mengecil mengikuti tinggi layar */
+@media (max-height: 650px) and (orientation: landscape) {
+  #app { padding-top: 5px; padding-bottom: 5px; }
+  .game-container { padding: 7px; }
+  #board { width: min(100%, 390px, 52dvh); }
+  .piece { height: 62px; }
+  .game-buttons button { min-height: 38px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
