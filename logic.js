@@ -62,6 +62,7 @@ let best = 0;
 let gameBusy = false;
 let playing = false;
 let cellEls = [];
+let pendingPlace = null;  // tap pada blok yang menyala, menunggu jari diangkat
 let previewCell = null;   // posisi tap terakhir yang sedang di-highlight
 let timerId = null;
 let timeLeft = 0;
@@ -120,6 +121,38 @@ function buildBoard() {
       cellEls.push(cell);
     }
   }
+
+  /* Jempol digeser di papan: highlight ikut bergerak mengikuti jari */
+  el.addEventListener("pointermove", e => {
+    if (e.pointerType === "mouse") return;
+    if (!playing || gameBusy || selectedPiece === -1) return;
+
+    const target = document.elementFromPoint(e.clientX, e.clientY);
+    const cell = target && target.closest ? target.closest("#board .cell") : null;
+    if (!cell) return;
+
+    const row = Number(cell.dataset.row);
+    const col = Number(cell.dataset.col);
+
+    /* Getaran kecil jari di atas blok yang menyala tidak membatalkan tap */
+    if (pendingPlace && inPreview(row, col)) return;
+
+    pendingPlace = null;
+
+    if (!previewCell || previewCell.row !== row || previewCell.col !== col) {
+      showPreview(row, col);
+    }
+  });
+
+  /* Jari / mouse diangkat: taruh blok jika yang disentuh adalah blok yang menyala */
+  el.addEventListener("pointerup", () => {
+    if (!pendingPlace) return;
+    const p = pendingPlace;
+    pendingPlace = null;
+    if (playing && !gameBusy) placePiece(p.row, p.col);
+  });
+
+  el.addEventListener("pointercancel", () => { pendingPlace = null; });
 
   /* Hanya mouse yang menghapus highlight saat keluar papan.
      Pada layar sentuh, highlight tetap ada setelah jari diangkat. */
@@ -209,8 +242,9 @@ function renderPieces() {
 
       selectedPiece = index;
       previewCell = null;
+      pendingPlace = null;
       GameAudio.select();
-      showMessage("Tap kotak tujuan untuk melihat posisi, tap lagi untuk menaruh.");
+      showMessage("Arahkan ke papan, lalu tap blok yang menyala untuk menaruh.");
       paintBoard();
       renderPieces();
     });
@@ -301,31 +335,55 @@ function showPreview(row, col) {
   }
 }
 
+/* Apakah kotak (row,col) termasuk bagian blok yang sedang menyala? */
+function inPreview(row, col) {
+  if (!previewCell) return false;
+
+  const piece = pieces[selectedPiece];
+  if (!piece) return false;
+
+  const a = anchor(piece, previewCell.row, previewCell.col);
+  const r = row - a.row;
+  const c = col - a.col;
+
+  return !!(piece.shape[r] && piece.shape[r][c]);
+}
+
 /*
- * Tap pertama  -> tampilkan highlight (hijau/putih = pas, merah = tidak muat)
- * Tap kedua di kotak yang sama -> taruh blok
- * Tap di kotak lain -> highlight pindah
+ * Sentuh kotak di papan:
+ *  - kotak kosong / di luar highlight -> highlight pindah ke situ
+ *    (bisa digeser dengan jempol, highlight ikut bergerak)
+ *  - sentuh blok yang sedang menyala  -> blok ditaruh saat jari diangkat
  */
 function handleBoardTap(row, col) {
-  const same = previewCell && previewCell.row === row && previewCell.col === col;
-
-  if (same) {
-    placePiece(row, col);
+  if (previewCell && inPreview(row, col)) {
+    pendingPlace = { row: previewCell.row, col: previewCell.col };
     return;
   }
 
+  pendingPlace = null;
   showPreview(row, col);
+  updatePreviewMessage(row, col);
+}
 
+function updatePreviewMessage(row, col) {
   const piece = pieces[selectedPiece];
   if (!piece) return;
 
   const a = anchor(piece, row, col);
 
   if (canPlace(piece, a.row, a.col)) {
-    showMessage("✅ Pas! Tap lagi di kotak yang sama untuk menaruh.");
+    showMessage("✅ Pas! Tap blok yang menyala untuk menaruh.");
   } else {
-    showMessage("❌ Belum muat. Tap kotak lain untuk menggeser.");
+    showMessage("❌ Belum muat. Geser atau tap kotak lain.");
   }
+}
+
+/* Otomatis pilih blok pertama yang tersisa, supaya highlight langsung muncul */
+function selectFirstPiece() {
+  selectedPiece = pieces.findIndex(p => p);
+  previewCell = null;
+  pendingPlace = null;
 }
 
 function hasAnyMove() {
@@ -362,6 +420,11 @@ function placePiece(tapRow, tapCol) {
 
   gameBusy = true;
   previewCell = null;
+  pendingPlace = null;
+
+  /* Blok berhasil ditaruh -> waktu langsung kembali penuh (TURN_SECONDS).
+     Waktu tetap berhenti selama animasi, lalu lanjut untuk giliran berikutnya. */
+  resetTurnTimer();
 
   /* Taruh blok ke data papan */
   const placed = [];
@@ -437,6 +500,7 @@ function finishTurn() {
     generatePieces();
   }
 
+  selectFirstPiece();
   paintBoard();
   renderPieces();
   updateScore();
@@ -548,6 +612,7 @@ function onTimeout() {
   gameBusy = true;
   selectedPiece = -1;
   previewCell = null;
+  pendingPlace = null;
   stopTimer();
 
   GameAudio.timeout();
@@ -577,10 +642,11 @@ function startGame() {
 
   createBoardData();
   generatePieces();
+  selectFirstPiece();
   paintBoard();
   renderPieces();
   updateScore();
-  showMessage("Pilih salah satu blok.");
+  showMessage("Arahkan ke papan untuk melihat posisi blok.");
 
   $("startOverlay").classList.add("hidden");
   $("gameOverOverlay").classList.add("hidden");
@@ -652,6 +718,7 @@ function goHome() {
   gameBusy = false;
   selectedPiece = -1;
   previewCell = null;
+  pendingPlace = null;
   score = 0;
 
   stopTimer();
@@ -669,7 +736,6 @@ function goHome() {
 
   showMessage("Pilih salah satu blok.");
 
-  $("exitOverlay").classList.add("hidden");
   $("pauseOverlay").classList.add("hidden");
   $("gameOverOverlay").classList.add("hidden");
   $("startOverlay").classList.remove("hidden");
@@ -722,20 +788,6 @@ function init() {
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) pauseGame();
   });
-
-  /* Tombol HOME: minta konfirmasi dulu, game dijeda selama konfirmasi */
-  $("btnHome").addEventListener("click", () => {
-    if (!playing || gameBusy) return;
-    playing = false;               // menjeda timer & input
-    $("exitOverlay").classList.remove("hidden");
-  });
-
-  $("btnExitCancel").addEventListener("click", () => {
-    $("exitOverlay").classList.add("hidden");
-    playing = true;
-  });
-
-  $("btnExitConfirm").addEventListener("click", goHome);
 
   $("btnGameOverHome").addEventListener("click", goHome);
 
