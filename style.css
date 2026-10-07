@@ -243,9 +243,9 @@ button {
 }
 
 .cell.preview-valid {
-  opacity: .72;
-  transform: scale(.88);
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .65), 0 0 10px rgba(255, 255, 255, .15);
+  opacity: .85;
+  transform: scale(.9);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .85), 0 0 12px rgba(255, 255, 255, .35);
 }
 
 .cell.preview-invalid {
@@ -397,6 +397,34 @@ button {
 .main-button:active {
   transform: translateY(3px) scale(.985);
   filter: brightness(.9);
+}
+
+.secondary-button {
+  background: linear-gradient(180deg, #ffffff, #dce8df);
+  color: #165329;
+  box-shadow: 0 5px 0 #aabcae, 0 12px 25px rgba(255, 255, 255, .15);
+}
+
+.red-button {
+  background: linear-gradient(180deg, #ff5367, #c90f2c);
+  color: #fff;
+  box-shadow: 0 5px 0 #850a1e;
+}
+
+.btn-row {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-row .main-button {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 8px;
+  font-size: clamp(12px, 3.6vw, 15px);
+}
+
+.small-title {
+  font-size: clamp(24px, 8vw, 34px);
 }
 
 .start-button {
