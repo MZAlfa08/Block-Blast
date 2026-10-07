@@ -9,6 +9,8 @@
      GameAudio.place();       // taruh blok
      GameAudio.clear(lines);  // hancurkan baris/kolom
      GameAudio.invalid();     // salah taruh
+     GameAudio.tick();        // detik terakhir
+     GameAudio.timeout();     // waktu habis
      GameAudio.gameOver();
      GameAudio.startMusic() / stopMusic()
      GameAudio.toggleMute()   // return true jika sekarang mute
@@ -140,6 +142,15 @@ const GameAudio = (() => {
     });
   }
 
+  function tick() {
+    tone(880, 0.05, { type: "square", vol: 0.1 });
+  }
+
+  function timeout() {
+    tone(300, 0.25, { type: "sawtooth", vol: 0.16, slideTo: 120 });
+    tone(200, 0.3, { type: "square", vol: 0.1, delay: 0.1, slideTo: 90 });
+  }
+
   function gameOver() {
     [392, 349.23, 311.13, 261.63].forEach((f, i) => {
       tone(f, 0.32, { type: "sawtooth", vol: 0.14, delay: i * 0.2 });
@@ -223,6 +234,8 @@ const GameAudio = (() => {
     place,
     clear,
     invalid,
+    tick,
+    timeout,
     start,
     gameOver,
     startMusic,
